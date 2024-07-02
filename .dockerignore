@@ -1,0 +1,9 @@
+README.md 
+Dockerfile
+Makefile
+.terraform.lock.hcl
+**/k8s
+**/generated
+**/.git
+cover.jpg
+**/.terraform

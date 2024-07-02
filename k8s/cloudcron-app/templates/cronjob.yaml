@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-job
+spec:
+  schedule: {{ .Values.cronjob.schedule }}
+  concurrencyPolicy: {{ .Values.cronjob.concurrencyPolicy }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: {{ .Release.Name }}-job-container
+            image: {{ .Values.cronjob.image }}
+            imagePullPolicy: Always
+            command: ["/bin/sh", "-c"]
+            args: [ {{ .Values.cronjob.script | quote }} ]
+            env:
+            {{- range .Values.cronjob.env }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .valueFrom.secretKeyRef.name }}
+                  key: {{ .valueFrom.secretKeyRef.key }}
+            {{- end }}
+            resources:
+              requests:
+                cpu: {{ .Values.cronjob.resources.requests.cpu }}
+                memory: {{ .Values.cronjob.resources.requests.memory }}
+              limits:
+                cpu: {{ .Values.cronjob.resources.limits.cpu }}
+                memory: {{ .Values.cronjob.resources.limits.memory }}
+            volumeMounts:
+            {{- range .Values.cronjob.volumeMounts }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+              readOnly: {{ .readOnly }}
+            {{- end }}
+          volumes:
+          {{- range .Values.cronjob.volumes }}
+          - name: {{ .name }}
+            secret:
+              secretName: {{ .secret.secretName }}
+          {{- end }}
+          restartPolicy: {{ .Values.cronjob.restartPolicy }}
+
+

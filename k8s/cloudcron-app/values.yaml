@@ -1,0 +1,97 @@
+# Default values for cloudcron-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: "cloudcron-app"
+fullnameOverride: ""
+
+secret:
+  data:
+    API_TOKEN: <API_TOKE_CLOUDFLARE>    # base64 encoded value of 'Cloudflare API Token'
+    GCHAT_NOTIFICATION: <GOOGLE_CHAT_NOTIFICATION_WEBHOOK> # base64 encoded value of 'GChat Notification channel'
+
+cronjob:
+  schedule: "0 3 * * *"
+  image: us-docker.pkg.dev/YOURHUB/YOURREPO/cloudcron:v1.0
+  imagePullPolicy: Always
+  concurrencyPolicy: Forbid
+  restartPolicy: OnFailure
+  script: |
+    #!/bin/sh
+    terraform init
+    git clone git@github.com:YOURUSERNAME/cloudcron.git
+    python3 cloudcron-script.py
+    cd cloudcron
+    git config --global user.email "YOURGITHUBEMAIL@YOURDOMAIN.com"
+    git add -A
+    git commit -m "Cloudflare Backup Finished at `date`"
+    git push origin main
+  env:
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: cloudcron-app-secrets
+        key: API_TOKEN
+  - name: GCHAT_NOTIFICATION
+    valueFrom:
+      secretKeyRef:
+        name: cloudcron-app-secrets
+        key: GCHAT_NOTIFICATION
+  volumeMounts:
+    - name: gcs-sa-key
+      mountPath: /var/secrets/google
+      readOnly: true
+  volumes:
+  - name: gcs-sa-key
+    secret:
+      secretName: gcs-sa-key
+  resources:
+    limits:
+      cpu: 200m
+      memory: 196Mi
+    requests:
+      cpu: 100m
+      memory: 128M
+
+serviceAccount: {}
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress: {}
+
+livenessProbe: {}
+
+readinessProbe: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
